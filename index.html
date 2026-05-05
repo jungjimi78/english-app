@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SpeakFlow</title>
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/727/727245.png">
+<style>
+body{font-family:-apple-system;background:#0f0f0f;color:#fff;margin:0;padding:20px}
+.app{max-width:500px;margin:auto}
+.card{background:#1c1c1e;border-radius:20px;padding:18px;margin-bottom:12px}
+h1{text-align:center}
+button{width:100%;padding:14px;border:none;border-radius:14px;margin-top:8px;font-weight:bold}
+.primary{background:#ff6b4a;color:white}
+.secondary{background:#2c2c2e;color:#ddd}
+.progress{height:8px;background:#333;border-radius:10px;margin-top:10px}
+.progress div{height:100%;background:#ff6b4a;width:0%}
+.small{font-size:13px;color:#aaa}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>SpeakFlow</h1>
+
+<div class="card">
+<div id="day"></div>
+<div id="sentence" style="font-size:20px;margin-top:10px"></div>
+
+<div class="progress"><div id="bar"></div></div>
+<div class="small" id="progressText"></div>
+
+<button class="primary" onclick="playNative()">🔊 Native</button>
+<button class="primary" onclick="recordMyVoice()">🎤 Record</button>
+<button class="primary" onclick="comparePlayback()">⚡ Compare</button>
+<button class="secondary" onclick="next()">Next</button>
+</div>
+
+<div class="card">
+<div id="status">Ready</div>
+</div>
+</div>
+
+<script>
+// 🔥 90일 문장 자동 생성 (5문장씩)
+function generateSentences(){
+const base=[
+"I just wanted to check in on this.",
+"Could you let me know when it's ready?",
+"I think we might need a little more time.",
+"I'll get back to you later today.",
+"That sounds good to me."
+];
+
+let all=[];
+for(let d=1; d<=90; d++){
+  for(let i=0;i<5;i++){
+    all.push(base[i]);
+  }
+}
+return all;
+}
+
+const sentences=generateSentences();
+
+let index=0;
+let mediaRecorder;
+let audioChunks=[];
+let myAudio=null;
+
+const sentenceEl=document.getElementById("sentence");
+const statusEl=document.getElementById("status");
+const dayEl=document.getElementById("day");
+const bar=document.getElementById("bar");
+const progressText=document.getElementById("progressText");
+
+function getDay(){return Math.floor(index/5)+1;}
+function getStep(){return (index%5)+1;}
+
+function render(){
+sentenceEl.innerText=sentences[index];
+dayEl.innerText="Day "+getDay()+" / 90";
+progressText.innerText="Sentence "+getStep()+" / 5";
+bar.style.width=(getStep()/5*100)+"%";
+}
+
+function next(){
+index=(index+1)%(90*5);
+render();
+}
+
+function playNative(){
+const u=new SpeechSynthesisUtterance(sentences[index]);
+u.lang="en-US";
+u.rate=0.9;
+speechSynthesis.speak(u);
+}
+
+async function recordMyVoice(){
+statusEl.innerText="Recording...";
+const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+mediaRecorder=new MediaRecorder(stream);
+audioChunks=[];
+
+mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+
+mediaRecorder.onstop=()=>{
+const blob=new Blob(audioChunks,{type:'audio/webm'});
+myAudio=new Audio(URL.createObjectURL(blob));
+statusEl.innerText="Recorded ✔";
+};
+
+mediaRecorder.start();
+setTimeout(()=>{mediaRecorder.stop();},3000);
+}
+
+function comparePlayback(){
+statusEl.innerText="Comparing...";
+playNative();
+setTimeout(()=>{if(myAudio) myAudio.play();},2000);
+setTimeout(()=>{playNative();},4000);
+setTimeout(()=>{if(myAudio) myAudio.play();},6000);
+}
+
+render();
+</script>
+</body>
+</html>
